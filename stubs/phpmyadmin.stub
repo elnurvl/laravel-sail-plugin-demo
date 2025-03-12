@@ -1,0 +1,10 @@
+phpmyadmin:
+    image: phpmyadmin:latest
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql  # Links to Sail’s default MySQL service
+    networks:
+      - sail
+    depends_on:
+      - mysql

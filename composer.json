@@ -1,0 +1,39 @@
+{
+    "name": "elnurvl/laravel-sail-plugin-demo",
+    "version": "1.0.0",
+    "description": "Demo plugin for Laravel Sail",
+    "keywords": ["laravel", "sail"],
+    "type": "library",
+    "repositories": [
+        {
+            "type": "github",
+            "url": "https://github.com/elnurvl/sail"
+        }
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0",
+        "laravel/sail": "^1.0.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "elnurvl\\DemoSailPlugin\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "elnurvl\\DemoSailPlugin\\ServiceProvider"
+            ]
+        }
+    },
+    "authors": [
+        {
+            "name": "Elnur Hajiyev"
+        }
+    ],
+    "minimum-stability": "dev"
+}
