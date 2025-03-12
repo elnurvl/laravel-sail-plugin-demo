@@ -1,0 +1,106 @@
+services:
+    '{{APP}}':
+        build:
+            context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/php/{{PHP_VERSION}}
+            dockerfile: Dockerfile
+            target: dev
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-{{PHP_VERSION}}/php-fpm
+        command: ["php-fpm"]
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+            - '{{DOMAIN}}:host-gateway'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        depends_on:
+            - scheduler
+            - worker
+        volumes:
+            - '.:/var/www/html'
+            - '{{CA_PATH}}/ca.pem:/usr/local/share/ca-certificates/ca.crt'
+        networks:
+            - sail
+    scheduler:
+        build:
+            context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/php/{{PHP_VERSION}}
+            dockerfile: Dockerfile
+            target: dev
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-{{PHP_VERSION}}/php-fpm
+        command: ["crond", "-f"]
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+            - '{{DOMAIN}}:host-gateway'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+            - '{{CA_PATH}}/ca.pem:/usr/local/share/ca-certificates/ca.crt'
+        networks:
+            - sail
+    worker:
+        build:
+            context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/php/{{PHP_VERSION}}
+            dockerfile: Dockerfile
+            target: dev
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-{{PHP_VERSION}}/php-fpm
+        command: ["php", "artisan", "queue:work"]
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+            - '{{DOMAIN}}:host-gateway'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+            - '{{CA_PATH}}/ca.pem:/usr/local/share/ca-certificates/ca.crt'
+        networks:
+            - sail
+    nginx:
+        build:
+            context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/nginx
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-$(id -g)}'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${APP_SSL_PORT:-443}:443'
+        depends_on:
+            - '{{APP}}'
+        volumes:
+            - './public:/var/www/html/public'
+            - './storage/app:/var/www/html/storage/app'
+            - './nginx-site.conf:/etc/nginx/conf.d/default.conf'
+            - '{{CERT_PATH}}:/etc/nginx/ssl'
+        networks:
+            - sail
+            - '{{EXTERNAL_NETWORK}}'
+    vite:
+        image: node:23-alpine
+        working_dir: '/app'
+        command: ["npm", "run", "dev", "--", "--host"]
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            TLS_DIR: ./storage/app/certs
+        volumes:
+            - '.:/app'
+        networks:
+            - sail
