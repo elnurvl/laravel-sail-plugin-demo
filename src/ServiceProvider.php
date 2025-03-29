@@ -23,10 +23,15 @@ class ServiceProvider extends BaseServiceProvider
         if (config('sail.enabled')) {
             $appUrl = config('app.url');
             Sail::setBaseTemplate(__DIR__ . '/../stubs/docker-compose.stub')
+                ->addService('keycloak', __DIR__ . '/../stubs/keycloak.stub')
                 ->addPreInstallCallback(function (Command $command, array $services, string $appService) use ($appUrl) {
                     exec('npm install');
 
                     $composePath = base_path('docker-compose.yml');
+
+                    $compose = Yaml::parseFile($composePath);
+
+                    $services = array_merge($services, array_keys($compose['services']));
 
                     if (file_exists($composePath)) {
                         $yaml = str_replace('\'{{EXTERNAL_NETWORK}}\'', config('sail.external_network'), file_get_contents($composePath));

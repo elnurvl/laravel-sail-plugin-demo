@@ -1,0 +1,11 @@
+{
+  "realm": "sso",
+  "enabled": true,
+  "clients": [{
+    "id" : "ec46675f-ee3e-49aa-85c1-c3f6893f893a",
+    "clientId" : "web",
+    "enabled" : true,
+    "publicClient": true,
+    "protocol" : "openid-connect"
+  }]
+}

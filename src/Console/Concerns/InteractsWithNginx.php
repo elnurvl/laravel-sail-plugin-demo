@@ -21,7 +21,9 @@ trait InteractsWithNginx
      */
     protected function gatherNginxConfigInteractively(Command $command, array $services)
     {
-        $domain = $command->ask('What is the domain?', Str::after(config('app.url'), '://'));
+        $appUrl = config('app.url');
+        $isHttps = Str::startsWith('https://', $appUrl);
+        $domain = $command->ask('What is the domain?', Str::after($appUrl, '://'));
         $corsPattern = "https?:\/\/.*\\." . preg_quote(parse_url('http://' . $domain, PHP_URL_HOST), '/');
 
         $proxies = [];
@@ -48,8 +50,8 @@ trait InteractsWithNginx
         // Keycloak proxy
         if (in_array('keycloak', $services) && $command->confirm('Do you want to add Keycloak proxy?', true)) {
             $proxies['keycloak'] = [
-                'path' => Str::start($command->ask('What is the path?', '/auth'), '/'),
-                'url' => $command->ask('What is the URL?', 'http://keycloak:'.env('FORWARD_KEYCLOAK_PORT', '8443')),
+                'path' => Str::start($command->ask('What is the path?', env('KEYCLOAK_PATH', 'auth')), '/'),
+                'url' => $command->ask('What is the URL?', 'https://keycloak:'.env('FORWARD_KEYCLOAK_PORT', '8443')),
                 'name' => 'Keycloak',
             ];
         }

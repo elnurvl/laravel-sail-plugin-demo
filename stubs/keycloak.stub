@@ -1,0 +1,27 @@
+keycloak:
+    build:
+        context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/keycloak
+    volumes:
+        - './storage/logs/keycloak:/opt/keycloak/data/logs'
+        - './storage/keycloak/data/import:/opt/keycloak/data/import'
+        - './storage/keycloak/conf:/opt/keycloak/conf'
+        - './storage/keycloak/themes:/opt/keycloak/themes'
+        - './storage/app/certs:/etc/x509/https'
+        - '{{CA_PATH}}:/opt/keycloak/conf/truststores'
+    command: ['start-dev', '--import-realm']
+    extra_hosts:
+        - '{{DOMAIN}}:host-gateway'
+    environment:
+        KEYCLOAK_ADMIN: '${KEYCLOAK_ADMIN_USER_NAME:-admin}'
+        KEYCLOAK_ADMIN_PASSWORD: '${KEYCLOAK_ADMIN_PASSWORD:-password}'
+        KC_HOSTNAME: '${KEYCLOAK_HOST:-${APP_URL:-localhost}:${APP_PORT:-80}}${KEYCLOAK_PATH:-/auth}'
+        KC_HTTP_RELATIVE_PATH: '${KEYCLOAK_PATH:-/auth}'
+        KC_PROXY_HEADERS: forwarded
+        KC_HTTPS_CERTIFICATE_FILE: /etc/x509/https/server.crt
+        KC_HTTPS_CERTIFICATE_KEY_FILE: /etc/x509/https/server.key
+        KC_TRUSTSTORE_PATHS: /opt/keycloak/conf/truststores
+        KC_TLS_HOSTNAME_VERIFIER: ANY
+        KC_METRICS_ENABLED: true
+        KC_HEALTH_ENABLED: true
+        KC_LOG: file
+    restart: on-failure
