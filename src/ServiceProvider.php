@@ -76,13 +76,40 @@ class ServiceProvider extends BaseServiceProvider
 
                     $services = array_merge($services, array_keys($compose['services']));
 
+                    $domain = Str::after($appUrl, '://');
+
                     if (file_exists($composePath)) {
                         $yaml = str_replace('\'{{EXTERNAL_NETWORK}}\'', config('sail.external_network'), file_get_contents($composePath));
                         $yaml = str_replace('{{CERT_PATH}}', './storage/app/certs', $yaml);
                         $yaml = str_replace('{{CA_PATH}}', config('sail.ca_path'), $yaml);
-                        $yaml = str_replace('{{DOMAIN}}', Str::after($appUrl, '://'), $yaml);
+                        $yaml = str_replace('{{DOMAIN}}', $domain, $yaml);
                         file_put_contents(base_path('docker-compose.yml'), $yaml);
                     }
+
+                    $file = 'vite.config.js';
+                    $content = file_get_contents(base_path($file));
+
+// Pattern to match after the plugins array, before the closing })
+                    $pattern = "/(plugins:\s*\[.*?\])(,\s*|\s*)\}/s";
+
+// New server config to insert
+                    $serverConfig = ",\n    server: {\n" .
+                        "        https: {\n" .
+                        "            key: fs.readFileSync((process.env.TLS_DIR || './storage/app/certs') + '/server.key'),\n" .
+                        "            cert: fs.readFileSync((process.env.TLS_DIR || './storage/app/certs') + '/server.crt'),\n" .
+                        "        },\n" .
+                        "        hmr: {\n" .
+                        "            host: '$domain',\n" .
+                        "        }\n" .
+                        "    }";
+
+// Insert server config before the closing }
+                    $newContent = preg_replace($pattern, "$1$serverConfig$2}", $content, 1);
+
+                    if ($newContent !== null && $newContent !== $content) {
+                        file_put_contents($file, $newContent);
+                    }
+
                     if (file_exists(base_path('nginx-site.conf'))) {
                         return;
                     }
