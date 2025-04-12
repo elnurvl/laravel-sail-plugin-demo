@@ -1,0 +1,26 @@
+reverb:
+    build:
+        context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/php/{{PHP_VERSION}}
+        dockerfile: Dockerfile
+        target: dev
+        args:
+            WWWGROUP: '${WWWGROUP}'
+    ports:
+        - '${REVERB_PORT:-8080}:8080'
+    image: sail-{{PHP_VERSION}}/php-fpm
+    pull_policy: never
+    command: ["php", "artisan", "reverb:start", "--debug"]
+    extra_hosts:
+        - 'host.docker.internal:host-gateway'
+        - '{{DOMAIN}}:host-gateway'
+    environment:
+        WWWUSER: '${WWWUSER}'
+        LARAVEL_SAIL: 1
+        XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+        XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+        IGNITION_LOCAL_SITES_PATH: '${PWD}'
+    volumes:
+        - '.:/var/www/html'
+        - '{{CA_PATH}}/ca.pem:/usr/local/share/ca-certificates/ca.crt'
+    networks:
+        - sail
