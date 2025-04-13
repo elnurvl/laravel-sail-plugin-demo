@@ -93,15 +93,13 @@ trait InteractsWithNginx
             $proxyPattern = '/';
         }
 
+        $domain = Str::after(config('app.url'), '://');
+
         // Replace basic placeholders
-        $nginxConfig = str_replace('{{DOMAIN}}', $config['domain'], $nginxConfig);
+        $nginxConfig = str_replace('{{DOMAIN}}', $domain, $nginxConfig);
         $nginxConfig = str_replace('{{CORS_PATTERN}}', $config['cors_pattern'], $nginxConfig);
         $nginxConfig = str_replace('{{FPM_PROXY_PATTERN}}', $proxyPattern, $nginxConfig);
         $nginxConfig = str_replace('{{APP_SERVICE}}', $appService, $nginxConfig);
-
-        if (Str::startsWith(config('app.url'), 'https://')) {
-            $this->generateTlsCertificates($command, $config['domain']);
-        }
 
         // Handle proxy blocks
         $proxyBlocks = '';
@@ -187,6 +185,8 @@ trait InteractsWithNginx
             "DNS:$domain",
             "DNS:*.$domain",
             "DNS:localhost",
+            "DNS:mailpit",
+            "DNS:keycloak",
         ], $extraDomains));
 
         $configContent = <<<EOT

@@ -1,0 +1,15 @@
+mailpit:
+    image: axllent/mailpit
+    volumes:
+        - 'sail-mailpit:/var/lib/mailpit/data/mailpit.db'
+        - './storage/app/certs:/etc/x509/https'
+    environment:
+        MP_DATABASE: /var/lib/mailpit/data/mailpit.db
+        MP_WEBROOT: mail
+        MP_SMTP_AUTH: '${MAIL_USERNAME:-sail}:${MAIL_PASSWORD:-password}'
+        MP_SMTP_REQUIRE_TLS: false
+        MP_SMTP_TLS_CERT: /etc/x509/https/server.crt
+        MP_SMTP_TLS_KEY: /etc/x509/https/server.key
+        MP_UI_TLS_CERT: /etc/x509/https/server.crt
+        MP_UI_TLS_KEY: /etc/x509/https/server.key
+        MP_SMTP_BIND_ADDR: :${MAIL_PORT:-1025}

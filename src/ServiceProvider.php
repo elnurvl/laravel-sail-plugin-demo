@@ -22,6 +22,7 @@ class ServiceProvider extends BaseServiceProvider
     {
         if (config('sail.enabled')) {
             $appUrl = config('app.url');
+            $domain = Str::after($appUrl, '://');
             Sail::setBaseTemplate(__DIR__ . '/../stubs/docker-compose.stub')
                 ->addService('keycloak', __DIR__ . '/../stubs/keycloak.stub')
                 ->addService('reverb', __DIR__ . '/../stubs/reverb.stub', preInstallCallback: function (Command $command) use ($appUrl) {
@@ -33,12 +34,24 @@ class ServiceProvider extends BaseServiceProvider
 
                     $this->configureReverbTls();
                 })
-                ->addPreInstallCallback(function (Command $command, array $services, string $appService) use ($appUrl) {
+                ->addService('mailpit', __DIR__ . '/../stubs/mailpit.stub', isPersistent: true, env: [
+                    'MAIL_MAILER' => 'smtp',
+                    'MAIL_HOST' => 'mailpit',
+                    'MAIL_PORT' => 587,
+                    'MAIL_USERNAME' => 'sail',
+                    'MAIL_PASSWORD' => 'password',
+                    'MAIL_FROM_ADDRESS' => 'hello@'.$domain,
+                ])
+                ->addPreInstallCallback(function (Command $command, array $services, string $appService) use ($appUrl, $domain) {
                     exec('npm install');
 
                     $this->configureDockerCompose();
 
                     $this->configureVite();
+
+                    if (Str::startsWith($appUrl, 'https://')) {
+                        $this->generateTlsCertificates($command, $domain);
+                    }
 
                     if (!file_exists(base_path('nginx-site.conf'))) {
                         $compose = Yaml::parseFile(base_path('docker-compose.yml'));
@@ -137,7 +150,6 @@ class ServiceProvider extends BaseServiceProvider
         if ($command->option('no-interaction')) {
             // Default Nginx config for non-interactive mode
             $nginxConfig = [
-                'domain' => 'localhost',
                 'proxies' => [
                     'proxy_0' => [
                         'path' => '/',
