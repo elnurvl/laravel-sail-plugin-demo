@@ -175,4 +175,103 @@ class ServiceProvider extends BaseServiceProvider
 
         $command->getOutput()->writeln('');
     }
+
+    /**
+     * Generate TLS certificates (CA, key, and cert) for the given domain with SANs.
+     *
+     * @param Command $command
+     * @param string $domain
+     * @return void
+     */
+    protected function generateTlsCertificates(Command $command, string $domain): void
+    {
+        $sslDir = storage_path('app/certs');
+        $caDir = rtrim(str_replace('~', getenv('HOME'), config('sail.ca_path')), '/');
+        $caKey = "$caDir/ca.key";
+        $caCert = "$caDir/ca.pem";
+        $serverKey = "$sslDir/server.key";
+        $serverCsr = "$sslDir/server.csr";
+        $serverCert = "$sslDir/server.crt";
+        $configFile = "$sslDir/openssl.cnf";
+
+        if (!is_dir($sslDir)) {
+            mkdir($sslDir, 0755, true);
+        }
+
+        if (!is_dir($caDir) && !mkdir($caDir, 0755, true) && !is_dir($caDir)) {
+            $command->error("Failed to create CA directory at: $caDir");
+            exit(1);
+        }
+
+        if (file_exists($serverCert) && file_exists($serverKey)) {
+            return;
+        }
+
+        if (!file_exists($caKey) || !file_exists($caCert)) {
+            exec("openssl genrsa -out '$caKey' 2048 2>/dev/null");
+            $subject = '/CN=Laravel Sail CA Self Signed CN/O=Laravel Sail CA Self Signed Organization/OU=Developers/emailAddress=rootcertificate@laravel.sail';
+            exec("openssl req -x509 -new -nodes -key '$caKey' -sha256 -days 3650 -out '$caCert' -subj '$subject' 2>/dev/null");
+            $command->getOutput()->info("Certificate authority has been generated and needs to be added to system truststore.");
+            switch (PHP_OS_FAMILY) {
+                case 'Darwin':
+                    exec("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '$caCert'");
+                    break;
+                case 'Windows':
+                    exec("certutil -addstore -f Root \"$caCert\"");
+                    break;
+                case 'Linux':
+                    $distro = strtolower(trim(exec('grep ^ID= /etc/os-release | cut -d= -f2 | tr -d \'"\' ')));
+                    if (in_array($distro, ['ubuntu', 'debian'])) {
+                        $dest = "/usr/local/share/ca-certificates/laravel_sail_ca.crt";
+                        exec("sudo cp '$caCert' '$dest'");
+                        exec("sudo update-ca-certificates");
+                    } elseif (in_array($distro, ['centos', 'fedora', 'rhel', 'rocky', 'almalinux'])) {
+                        $dest = "/etc/pki/ca-trust/source/anchors/laravel_sail_ca.crt";
+                        exec("sudo cp '$caCert' '$dest'");
+                        exec("sudo update-ca-trust extract");
+                    }
+                    break;
+            }
+        }
+
+        exec("openssl genrsa -out '$serverKey' 2048 2>/dev/null");
+
+        $extraDomains = [];
+        if ($extra = config('sail.tls_san')) {
+            $extraDomains = array_map(fn($line) => "DNS:" . trim($line), explode(',', $extra));
+        }
+
+        $sanString = implode(", ", array_merge([
+            "DNS:$domain",
+            "DNS:*.$domain",
+            "DNS:localhost",
+            "DNS:mailpit",
+            "DNS:keycloak",
+        ], $extraDomains));
+
+        $configContent = <<<EOT
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = $domain
+
+[v3_req]
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = $sanString
+EOT;
+
+        file_put_contents($configFile, $configContent);
+
+        exec("openssl req -new -key '$serverKey' -out '$serverCsr' -config '$configFile' 2>/dev/null");
+        exec("openssl x509 -req -in '$serverCsr' -CA '$caCert' -CAkey '$caKey' -CAcreateserial -out '$serverCert' -days 365 -sha256 -extfile '$configFile' -extensions v3_req 2>/dev/null");
+
+        $command->info("Generated TLS certificates.");
+
+        @unlink($serverCsr);
+        @unlink($configFile);
+    }
 }
