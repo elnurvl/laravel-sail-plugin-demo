@@ -31,8 +31,6 @@ class ServiceProvider extends BaseServiceProvider
                     $environment = file_get_contents($this->app->basePath('.env'));
                     $environment = Str::replace('REVERB_HOST="localhost"', 'REVERB_HOST='.Str::after($appUrl,'://'), $environment);
                     file_put_contents($this->app->basePath('.env'), $environment);
-
-                    $this->configureReverbTls();
                 })
                 ->addService('mailpit', __DIR__ . '/../stubs/mailpit.stub', isPersistent: true, env: [
                     'MAIL_MAILER' => 'smtp',
@@ -60,44 +58,6 @@ class ServiceProvider extends BaseServiceProvider
                     }
 
                 })->addNetwork([config('sail.external_network') => ['external' => true]]);
-        }
-    }
-
-    private function configureReverbTls(): void
-    {
-        $file = base_path('config/reverb.php');
-        $content = file_get_contents($file);
-        $appUrl = config('app.url');
-        if (Str::startsWith($appUrl, 'https://')) {
-            $pattern = "/('tls'\s*=>\s*\[)([^\]]*?)(\h*])([,]?)/ms";
-
-            if (preg_match($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
-                $start = $matches[0][1];
-                $lineStart = strrpos(substr($content, 0, $start), "\n") + 1;
-                $line = substr($content, $lineStart, $start - $lineStart);
-                $indent = str_repeat(' ', strlen($line) - strlen(ltrim($line)) + 4);
-                $baseIndent = str_repeat(' ', strlen($line) - strlen(ltrim($line)));
-
-                $newBlock = $matches[1][0] . "\n" .
-                    $indent . "'local_cert'  => storage_path('/app/certs/server.crt'),\n" .
-                    $indent . "'local_pk'    => storage_path('/app/certs/server.key'),\n" .
-                    $indent . "'verify_peer' => false,\n" .
-                    $baseIndent . "]";
-
-                $newContent = preg_replace($pattern, $newBlock, $content, 1);
-
-                if ($newContent !== null && $newContent !== $content) {
-                    file_put_contents($file, $newContent);
-                }
-            }
-        } else {
-            $pattern = "/'tls'\s*=>\s*\[[^\]]*?\]/ms";
-            $newBlock = "'tls' => [],";
-            $newContent = preg_replace($pattern, $newBlock, $content, 1);
-
-            if ($newContent !== null && $newContent !== $content) {
-                file_put_contents($file, $newContent);
-            }
         }
     }
 
@@ -168,7 +128,7 @@ class ServiceProvider extends BaseServiceProvider
             $nginxConfig = $this->gatherNginxConfigInteractively($command, $services);
         }
 
-        $this->buildNginxConfig($command, $nginxConfig, $appService);
+        $this->buildNginxConfig($command, $nginxConfig, $appService, $services);
 
         $command->info('Nginx configuration installed successfully. Place it in your Nginx sites directory.');
         $command->getOutput()->writeln('<fg=gray>➜</> Generated at: <options=bold>' . base_path('nginx-site.conf') . '</>');

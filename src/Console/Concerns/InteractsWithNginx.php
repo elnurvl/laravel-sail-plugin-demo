@@ -59,9 +59,10 @@ trait InteractsWithNginx
      * @param Command $command
      * @param array $config
      * @param string $appService
+     * @param array $services
      * @return void
      */
-    protected function buildNginxConfig(Command $command, array $config, string $appService)
+    protected function buildNginxConfig(Command $command, array $config, string $appService, array $services)
     {
         $stubPath = __DIR__ . '/../../../stubs/nginx-site.stub';
         $outputPath = base_path('nginx-site.conf');
@@ -70,7 +71,7 @@ trait InteractsWithNginx
 
         $search = collect($config['proxies'])->search(fn($item) => $item['path'] === '/');
         if ($search !== false) {
-            $proxyPattern = '/api';
+            $proxyPattern = '~ ^/(api|apps|telescope|horizon|health|_ignition|vendor|.well-known)';
         } else {
             $proxyPattern = '/';
         }
@@ -79,8 +80,11 @@ trait InteractsWithNginx
 
         $nginxConfig = str_replace('{{DOMAIN}}', $domain, $nginxConfig);
         $nginxConfig = str_replace('{{CORS_PATTERN}}', $config['cors_pattern'], $nginxConfig);
-        $nginxConfig = str_replace('{{FPM_PROXY_PATTERN}}', $proxyPattern, $nginxConfig);
         $nginxConfig = str_replace('{{APP_SERVICE}}', $appService, $nginxConfig);
+        $nginxConfig = str_replace('{{FPM_PROXY_PATTERN}}', $proxyPattern, $nginxConfig);
+
+        $websocketBlock = in_array('reverb', $services) ? $this->generateWebSocketBlock() : '';
+        $nginxConfig = str_replace('{{REVERB}}', $websocketBlock, $nginxConfig);
 
         $proxyBlocks = '';
         foreach ($config['proxies'] as $service => $details) {
@@ -123,6 +127,29 @@ trait InteractsWithNginx
         $block .= "    }\n";
 
         return $block;
+    }
+
+    /**
+     * Generate the WebSocket block for Reverb.
+     *
+     * @return string
+     */
+    protected function generateWebSocketBlock(): string
+    {
+        return <<<EOT
+location /app {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header Scheme \$scheme;
+        proxy_set_header SERVER_PORT \$server_port;
+        proxy_set_header REMOTE_ADDR \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        set \$upstream http://reverb:8080;
+        proxy_pass \$upstream;
+    }
+EOT;
     }
 
     /**

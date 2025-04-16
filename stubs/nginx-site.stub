@@ -40,13 +40,11 @@ server {
         return 403;
     }
 
-    location ~ ^/(telescope|jwks|horizon|health|_ignition|vendor) {
-        try_files $uri /index.php?$query_string;
-    }
-
     location {{FPM_PROXY_PATTERN}} {
         try_files $uri /index.php?$query_string;
     }
+
+    {{REVERB}}
 
     location ~ (\.txt|\.ico)$ {
         root /var/www/html/public;
