@@ -19,8 +19,8 @@ services:
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
         depends_on:
-            - scheduler
-            - worker
+            - cron
+            - queue
         volumes:
             - '.:/var/www/html'
             - '{{CA_PATH}}/ca.pem:/usr/local/share/ca-certificates/ca.crt'
