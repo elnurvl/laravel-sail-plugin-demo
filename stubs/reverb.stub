@@ -1,6 +1,6 @@
 reverb:
     build:
-        context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/php/{{PHP_VERSION}}
+        context: ./vendor/elnurvl/sail-plugin/runtimes/php/{{PHP_VERSION}}
         dockerfile: Dockerfile
         target: dev
         args:

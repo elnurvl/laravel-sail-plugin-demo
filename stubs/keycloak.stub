@@ -1,6 +1,6 @@
 keycloak:
     build:
-        context: ./vendor/elnurvl/laravel-sail-plugin-demo/runtimes/keycloak
+        context: ./vendor/elnurvl/sail-plugin/runtimes/keycloak
     volumes:
         - './storage/logs/keycloak:/opt/keycloak/data/logs'
         - './storage/keycloak/data/import:/opt/keycloak/data/import'

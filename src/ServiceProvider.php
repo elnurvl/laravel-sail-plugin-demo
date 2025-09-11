@@ -1,8 +1,8 @@
 <?php
 
-namespace elnurvl\DemoSailPlugin;
+namespace elnurvl\SailPlugin;
 
-use elnurvl\DemoSailPlugin\Console\Concerns\InteractsWithNginx;
+use elnurvl\SailPlugin\Console\Concerns\InteractsWithNginx;
 use Illuminate\Console\Command;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Illuminate\Support\Str;
@@ -27,9 +27,9 @@ class ServiceProvider extends BaseServiceProvider
                 ->addService('keycloak', __DIR__ . '/../stubs/keycloak.stub')
                 ->addService('reverb', __DIR__ . '/../stubs/reverb.stub', preInstallCallback: function (Command $command) use ($appUrl) {
                     $command->call('install:broadcasting');
-
                     $environment = file_get_contents($this->app->basePath('.env'));
-                    $environment = Str::replace('REVERB_HOST="localhost"', 'REVERB_HOST='.Str::after($appUrl,'://'), $environment);
+                    $environment = preg_replace('/^REVERB_HOST=.*/m', 'REVERB_HOST='.Str::after($appUrl, '://'), $environment);
+                    $environment = preg_replace('/^VITE_REVERB_PORT=.*\n/m', '', $environment);
                     file_put_contents($this->app->basePath('.env'), $environment);
                 })
                 ->addService('mailpit', __DIR__ . '/../stubs/mailpit.stub', isPersistent: true, env: [

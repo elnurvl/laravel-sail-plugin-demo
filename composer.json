@@ -1,32 +1,25 @@
 {
-    "name": "elnurvl/laravel-sail-plugin-demo",
-    "version": "1.0.0",
-    "description": "Demo plugin for Laravel Sail",
-    "keywords": ["laravel", "sail"],
+    "name": "elnurvl/sail-plugin",
+    "description": "A utility plugin the fork of Laravel Sail (elnurvl/sail)",
+    "keywords": ["laravel", "sail", "nginx", "keycloak"],
     "type": "library",
-    "repositories": [
-        {
-            "type": "github",
-            "url": "https://github.com/elnurvl/sail"
-        }
-    ],
     "require": {
         "php": "^8.3"
     },
     "require-dev": {
         "orchestra/testbench": "^10.0",
-        "laravel/sail": "^1.0.0"
+        "elnurvl/sail": "^0.1.0"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "elnurvl\\DemoSailPlugin\\": "src/"
+            "elnurvl\\SailPlugin\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "elnurvl\\DemoSailPlugin\\ServiceProvider"
+                "elnurvl\\SailPlugin\\ServiceProvider"
             ]
         }
     },
@@ -35,5 +28,6 @@
             "name": "Elnur Hajiyev"
         }
     ],
-    "minimum-stability": "dev"
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

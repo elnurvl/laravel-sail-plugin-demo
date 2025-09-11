@@ -1,6 +1,6 @@
 <?php
 
-namespace elnurvl\DemoSailPlugin\Console\Concerns;
+namespace elnurvl\SailPlugin\Console\Concerns;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
